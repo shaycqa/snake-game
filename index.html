@@ -52,6 +52,9 @@
         font-size: 26px;
         width: 40px;
         text-align: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
     input[type="range"] {
         flex-grow: 1;
@@ -60,31 +63,23 @@
     }
     button {
         padding: 12px;
-        font-size: 20px;
+        font-size: 18px;
         font-weight: bold;
-        font-family: inherit;
-        background-color: #FF9800;
+        background-color: #FF5722;
         color: white;
-        text-shadow: 1px 1px 0 #D84315;
-        border: 3px solid #F57C00;
-        border-radius: 10px;
+        border: none;
+        border-radius: 5px;
         cursor: pointer;
-        box-shadow: 0 4px 0 #E65100;
-        transition: transform 0.1s, box-shadow 0.1s;
+        transition: background 0.2s, transform 0.1s;
     }
     button:hover {
-        background-color: #FFA726;
+        background-color: #E64A19;
     }
     button:active {
-        transform: translateY(4px);
-        box-shadow: 0 0 0 #E65100;
+        transform: scale(0.95);
     }
     button:disabled {
-        background-color: #B0BEC5;
-        border-color: #90A4AE;
-        color: #ECEFF1;
-        box-shadow: 0 4px 0 #78909C;
-        text-shadow: none;
+        background-color: #ccc;
         cursor: not-allowed;
         transform: none;
     }
@@ -120,11 +115,15 @@
 
 <div id="ui-container">
     <div class="control-group">
-        <label title="Bomb Power">💣</label>
+        <label title="Bomb Power">
+            <img src="bomb.png" style="width: 24px; height: 24px;" onerror="this.onerror=null; this.outerHTML='💣';">
+        </label>
         <input type="range" id="powerSlider" min="1" max="10" value="5">
     </div>
     <div class="control-group">
-        <label title="Direction (Left/Right)">↔️</label>
+        <label title="Direction (Left/Right)">
+            <img src="arrow.png" style="width: 24px; height: 24px;" onerror="this.onerror=null; this.outerHTML='↔️';">
+        </label>
         <input type="range" id="directionSlider" min="-10" max="10" value="0">
     </div>
     <button id="launchBtn">LAUNCH SLOTH!</button>
@@ -181,6 +180,11 @@
             osc.stop(now + 0.1);
         }
     }
+
+    // Image Assets (Generated via Nano Banana)
+    const imgSloth = new Image(); imgSloth.src = 'sloth.png';
+    const imgApple = new Image(); imgApple.src = 'apple.png';
+    const imgBomb = new Image(); imgBomb.src = 'bomb.png';
 
     // Game state
     let state = 'idle'; // idle, flying, waiting
@@ -483,8 +487,12 @@
         ctx.textBaseline = 'middle';
         for (let a of apples) {
             if (!a.collected) {
-                ctx.font = `${a.radius * 2}px Arial`;
-                ctx.fillText('🍎', a.x, a.y);
+                if (imgApple.complete && imgApple.naturalHeight !== 0) {
+                    ctx.drawImage(imgApple, a.x - a.radius, a.y - a.radius, a.radius * 2, a.radius * 2);
+                } else {
+                    ctx.font = `${a.radius * 2}px Arial`;
+                    ctx.fillText('🍎', a.x, a.y);
+                }
             }
         }
 
@@ -494,11 +502,15 @@
             const bombX = sloth.x + (direction * 2.5);
             const bombY = sloth.y + 18;
             
-            ctx.font = '22px Arial';
             let numBombs = Math.min(3, Math.ceil(power / 3.3)); 
             for(let i=0; i<numBombs; i++) {
                 let offsetX = (i - (numBombs-1)/2) * 15;
-                ctx.fillText('💣', bombX + offsetX, bombY);
+                if (imgBomb.complete && imgBomb.naturalHeight !== 0) {
+                    ctx.drawImage(imgBomb, bombX + offsetX - 12, bombY - 12, 24, 24);
+                } else {
+                    ctx.font = '22px Arial';
+                    ctx.fillText('💣', bombX + offsetX, bombY);
+                }
             }
         }
 
@@ -514,8 +526,12 @@
         ctx.save();
         ctx.translate(sloth.x, sloth.y);
         ctx.rotate(sloth.rotation);
-        ctx.font = '40px Arial';
-        ctx.fillText('🦥', 0, 0);
+        if (imgSloth.complete && imgSloth.naturalHeight !== 0) {
+            ctx.drawImage(imgSloth, -sloth.radius * 1.5, -sloth.radius * 1.5, sloth.radius * 3, sloth.radius * 3);
+        } else {
+            ctx.font = '40px Arial';
+            ctx.fillText('🦥', 0, 0);
+        }
         ctx.restore();
     }
 
