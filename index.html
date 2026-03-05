@@ -8,8 +8,8 @@
     body {
         margin: 0;
         padding: 0;
-        background-color: #87CEEB; /* Sky blue */
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #A3D8F4; /* Brighter sky */
+        font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif; /* MapleStory vibe */
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -17,24 +17,27 @@
     }
     h1 {
         margin: 10px 0 5px;
-        color: #333;
-        text-shadow: 1px 1px 2px rgba(255,255,255,0.7);
+        color: #fff;
+        text-shadow: 2px 2px 0 #5B88B2, -1px -1px 0 #5B88B2, 1px -1px 0 #5B88B2, -1px 1px 0 #5B88B2, 1px 1px 0 #5B88B2;
+        font-size: 2.5em;
+        letter-spacing: 2px;
     }
     #game-container {
         position: relative;
     }
     canvas {
-        background-color: #E0F6FF;
-        border: 2px solid #333;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        background: linear-gradient(to bottom, #BCE4FB 0%, #DDF2FC 100%);
+        border: 4px solid #7FAFC6;
+        border-radius: 12px;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     }
     #ui-container {
         margin-top: 15px;
-        background: white;
+        background: #fff;
         padding: 15px 30px;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        border: 3px solid #7FAFC6;
+        border-radius: 15px;
+        box-shadow: 0 4px 0 #7FAFC6, 0 8px 12px rgba(0,0,0,0.2);
         display: flex;
         flex-direction: column;
         gap: 15px;
@@ -46,33 +49,42 @@
         gap: 10px;
     }
     .control-group label {
-        font-size: 24px;
+        font-size: 26px;
         width: 40px;
         text-align: center;
     }
     input[type="range"] {
         flex-grow: 1;
         cursor: pointer;
+        accent-color: #FFB03B;
     }
     button {
         padding: 12px;
-        font-size: 18px;
+        font-size: 20px;
         font-weight: bold;
-        background-color: #FF5722;
+        font-family: inherit;
+        background-color: #FF9800;
         color: white;
-        border: none;
-        border-radius: 5px;
+        text-shadow: 1px 1px 0 #D84315;
+        border: 3px solid #F57C00;
+        border-radius: 10px;
         cursor: pointer;
-        transition: background 0.2s, transform 0.1s;
+        box-shadow: 0 4px 0 #E65100;
+        transition: transform 0.1s, box-shadow 0.1s;
     }
     button:hover {
-        background-color: #E64A19;
+        background-color: #FFA726;
     }
     button:active {
-        transform: scale(0.95);
+        transform: translateY(4px);
+        box-shadow: 0 0 0 #E65100;
     }
     button:disabled {
-        background-color: #ccc;
+        background-color: #B0BEC5;
+        border-color: #90A4AE;
+        color: #ECEFF1;
+        box-shadow: 0 4px 0 #78909C;
+        text-shadow: none;
         cursor: not-allowed;
         transform: none;
     }
@@ -81,13 +93,15 @@
         justify-content: space-between;
         width: 400px;
         margin-top: 5px;
-        font-size: 20px;
-        font-weight: bold;
-        color: #333;
-        background: rgba(255, 255, 255, 0.7);
+        font-size: 22px;
+        color: #fff;
+        text-shadow: 1px 1px 0 #5B88B2, -1px -1px 0 #5B88B2, 1px -1px 0 #5B88B2, -1px 1px 0 #5B88B2, 1px 1px 0 #5B88B2;
+        background: rgba(127, 175, 198, 0.8);
+        border: 2px solid #fff;
         padding: 5px 15px;
         border-radius: 20px;
         box-sizing: border-box;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 </style>
 </head>
@@ -435,10 +449,35 @@
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle = '#795548'; 
+        // Sky gradient background drawn behind everything
+        let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#BCE4FB');
+        gradient.addColorStop(1, '#DDF2FC');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw ground (MapleStory vibrant style)
+        ctx.fillStyle = '#C28955'; // Vibrant dirt
         ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
-        ctx.fillStyle = '#4CAF50'; 
-        ctx.fillRect(0, groundY, canvas.width, 8);
+        
+        // Dirt texture dots
+        ctx.fillStyle = '#A86C3E';
+        for(let i=0; i<10; i++) {
+            ctx.fillRect(10 + i*40, groundY + 5, 8, 3);
+            ctx.fillRect(25 + i*35, groundY + 12, 6, 2);
+        }
+
+        // Layered bright grass
+        ctx.fillStyle = '#89C74E'; // Shadow grass
+        ctx.fillRect(0, groundY - 2, canvas.width, 10);
+        ctx.fillStyle = '#A0E85B'; // Bright highlight grass
+        ctx.fillRect(0, groundY - 4, canvas.width, 8);
+        
+        // Grass tufts
+        ctx.fillStyle = '#A0E85B';
+        for(let i=0; i<20; i++) {
+            ctx.fillRect(i*20, groundY - 8, 4, 8);
+        }
 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
