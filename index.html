@@ -172,8 +172,10 @@
     let state = 'idle'; // idle, flying, waiting
     let level = 1;
     let score = 0;
+    let scoreAtLevelStart = 0;
     let apples = [];
     let particles = []; 
+    let isDragging = false;
 
     const groundY = canvas.height - 15;
     
@@ -204,23 +206,82 @@
     const levelEl = document.getElementById('level');
     const scoreEl = document.getElementById('score');
 
+    // Drag and Drop Logic
+    canvas.addEventListener('mousedown', (e) => {
+        if (state !== 'idle') return;
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const dist = Math.hypot(sloth.x - mouseX, sloth.y - mouseY);
+        if (dist < sloth.radius * 1.5) { 
+            isDragging = true;
+        }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        if (state === 'idle') {
+            const dist = Math.hypot(sloth.x - mouseX, sloth.y - mouseY);
+            canvas.style.cursor = (dist < sloth.radius * 1.5 || isDragging) ? 'grab' : 'default';
+        } else {
+            canvas.style.cursor = 'default';
+        }
+
+        if (isDragging) {
+            canvas.style.cursor = 'grabbing';
+            sloth.x = Math.max(sloth.radius, Math.min(canvas.width - sloth.radius, mouseX));
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            canvas.style.cursor = 'grab';
+        }
+    });
+    
+    canvas.addEventListener('touchstart', (e) => {
+        if (state !== 'idle') return;
+        const rect = canvas.getBoundingClientRect();
+        const touchX = e.touches[0].clientX - rect.left;
+        const touchY = e.touches[0].clientY - rect.top;
+        const dist = Math.hypot(sloth.x - touchX, sloth.y - touchY);
+        if (dist < sloth.radius * 2) {
+            isDragging = true;
+            e.preventDefault();
+        }
+    }, {passive: false});
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (isDragging) {
+            const rect = canvas.getBoundingClientRect();
+            const touchX = e.touches[0].clientX - rect.left;
+            sloth.x = Math.max(sloth.radius, Math.min(canvas.width - sloth.radius, touchX));
+            e.preventDefault();
+        }
+    }, {passive: false});
+
+    window.addEventListener('touchend', () => {
+        isDragging = false;
+    });
+
     function createLevel() {
+        scoreAtLevelStart = score;
         apples = [];
-        // More apples as level increases
         const numApples = Math.min(2 + Math.floor(level / 2), 7); 
         
         for (let i = 0; i < numApples; i++) {
-            // Smaller apples as level increases (min radius 10, max 22)
             const size = Math.max(10, 22 - (level * 0.8)); 
             
             let placed = false;
             let attempts = 0;
             while (!placed && attempts < 100) {
-                // Keep apples in the top 60% of the screen
                 const x = size + Math.random() * (canvas.width - 2 * size);
                 const y = size + Math.random() * (canvas.height * 0.6); 
                 
-                // Avoid overlap
                 let tooClose = false;
                 for (let a of apples) {
                     const dist = Math.hypot(a.x - x, a.y - y);
@@ -261,19 +322,14 @@
         if (state !== 'idle') return;
 
         const power = parseInt(powerSlider.value);
-        const direction = parseInt(directionSlider.value); // -10 to 10
+        const direction = parseInt(directionSlider.value); 
 
-        // Calculate velocity
-        // power goes from 1 to 10. Higher power = higher jump.
         let forceY = -10 - (power * 1.6); 
-        // direction < 0 (left slider) -> bomb on left -> pushes right
-        // direction > 0 (right slider) -> bomb on right -> pushes left
         let forceX = -direction * 1.2; 
 
         sloth.vx = forceX;
         sloth.vy = forceY;
         
-        // Bomb placement visually
         const bombX = sloth.x + (direction * 2.5);
         const bombY = sloth.y + 15;
 
@@ -292,7 +348,6 @@
             sloth.y += sloth.vy;
             sloth.rotation += sloth.vx * 0.05;
 
-            // Wall bounce
             if (sloth.x - sloth.radius < 0) {
                 sloth.x = sloth.radius;
                 sloth.vx *= bounceFactor;
@@ -303,36 +358,35 @@
                 playSound('bounce');
             }
 
-            // Ceiling bounce 
             if (sloth.y - sloth.radius < 0) {
                 sloth.y = sloth.radius;
                 sloth.vy *= bounceFactor;
                 playSound('bounce');
             }
 
-            // Ground hit
             if (sloth.y + sloth.radius > groundY) {
                 sloth.y = groundY - sloth.radius;
                 sloth.vy *= bounceFactor;
                 sloth.vx *= friction;
                 
-                // Stop completely if moving slowly
                 if (Math.abs(sloth.vy) < 2.0 && Math.abs(sloth.vx) < 0.5) {
                     sloth.vx = 0;
                     sloth.vy = 0;
                     sloth.rotation = 0;
                     state = 'waiting';
                     
-                    // Check level completion
                     if (apples.every(a => a.collected)) {
                         launchBtn.textContent = 'LEVEL CLEAR!';
                         level++;
                         setTimeout(createLevel, 1500);
                     } else {
-                        // Reset for retry
                         launchBtn.textContent = 'MISSED! RETRYING...';
                         setTimeout(() => {
                             if (state === 'waiting') {
+                                apples.forEach(a => a.collected = false);
+                                score = scoreAtLevelStart;
+                                scoreEl.textContent = score;
+                                
                                 sloth.reset();
                                 state = 'idle';
                                 launchBtn.disabled = false;
@@ -345,17 +399,15 @@
                 }
             }
 
-            // Apple collision
             for (let a of apples) {
                 if (!a.collected) {
                     const dist = Math.hypot(sloth.x - a.x, sloth.y - a.y);
                     if (dist < sloth.radius + a.radius) {
                         a.collected = true;
-                        score += 10 * level; // more points for higher levels
+                        score += 10 * level; 
                         scoreEl.textContent = score;
                         playSound('apple');
                         
-                        // Small particle effect for apple collect
                         for(let i=0; i<8; i++) {
                             particles.push({
                                 x: a.x, y: a.y,
@@ -369,7 +421,6 @@
             }
         }
 
-        // Update particles
         for (let i = particles.length - 1; i >= 0; i--) {
             let p = particles[i];
             p.x += p.vx;
@@ -384,13 +435,11 @@
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Draw ground (dirt and grass)
-        ctx.fillStyle = '#795548'; // Dirt brown
+        ctx.fillStyle = '#795548'; 
         ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
-        ctx.fillStyle = '#4CAF50'; // Grass green
+        ctx.fillStyle = '#4CAF50'; 
         ctx.fillRect(0, groundY, canvas.width, 8);
 
-        // Draw apples
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         for (let a of apples) {
@@ -400,7 +449,6 @@
             }
         }
 
-        // Draw Bombs indicator when idle
         if (state === 'idle') {
             const direction = parseInt(directionSlider.value);
             const power = parseInt(powerSlider.value);
@@ -408,15 +456,13 @@
             const bombY = sloth.y + 18;
             
             ctx.font = '22px Arial';
-            let numBombs = Math.min(3, Math.ceil(power / 3.3)); // 1 to 3 bombs based on power
+            let numBombs = Math.min(3, Math.ceil(power / 3.3)); 
             for(let i=0; i<numBombs; i++) {
-                // Offset multiple bombs slightly
                 let offsetX = (i - (numBombs-1)/2) * 15;
                 ctx.fillText('💣', bombX + offsetX, bombY);
             }
         }
 
-        // Draw particles
         for (let p of particles) {
             ctx.globalAlpha = p.life;
             ctx.fillStyle = p.color;
@@ -426,7 +472,6 @@
             ctx.globalAlpha = 1.0;
         }
 
-        // Draw sloth
         ctx.save();
         ctx.translate(sloth.x, sloth.y);
         ctx.rotate(sloth.rotation);
@@ -441,7 +486,6 @@
         requestAnimationFrame(loop);
     }
 
-    // Start
     createLevel();
     loop();
 </script>
