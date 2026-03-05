@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sloth Launcher - Physics Game</title>
+<script src="https://js.puter.com/v2/"></script>
 <style>
     body {
         margin: 0;
@@ -117,13 +118,13 @@
 <div id="ui-container">
     <div class="control-group">
         <label title="Bomb Power">
-            <img src="bomb.png" style="width: 24px; height: 24px;" onerror="this.onerror=null; this.outerHTML='💣';">
+            <img src="bomb.png" style="width: 24px; height: 24px;" alt="Bomb">
         </label>
         <input type="range" id="powerSlider" min="1" max="10" value="5">
     </div>
     <div class="control-group">
         <label title="Direction (Left/Right)">
-            <img src="arrow.png" style="width: 24px; height: 24px;" onerror="this.onerror=null; this.outerHTML='↔️';">
+            <img src="arrow.png" style="width: 24px; height: 24px;" alt="Arrow">
         </label>
         <input type="range" id="directionSlider" min="-10" max="10" value="0">
     </div>
@@ -181,10 +182,55 @@
         }
     }
 
-    // Image Assets (Generated via Nano Banana)
+    // Image Assets
     const imgSloth = new Image(); imgSloth.src = 'sloth.png';
     const imgApple = new Image(); imgApple.src = 'apple.png';
     const imgBomb = new Image(); imgBomb.src = 'bomb.png';
+    
+    // Auto-generate missing images via Puter.js
+    async function generateFallbackImage(imgObj, prompt, emojiFallback) {
+        imgObj.onerror = null; // prevent infinite loop
+        if (typeof puter !== 'undefined' && puter.ai) {
+            try {
+                const generatedImg = await puter.ai.txt2img(prompt, { model: 'gemini-2.5-flash-image-preview' });
+                imgObj.src = generatedImg.src;
+                return;
+            } catch(e) {
+                console.error("Failed to generate image", e);
+            }
+        }
+        // Fallback to empty if we couldn't load it
+    }
+
+    imgSloth.onerror = () => generateFallbackImage(imgSloth, "A clean 2D cute MapleStory style game sprite of a brown sloth, white background, flat lighting, clear outline, centered, highly detailed.");
+    imgApple.onerror = () => generateFallbackImage(imgApple, "A clean 2D cute MapleStory style game sprite of a shiny red apple, white background, flat lighting, clear outline, centered, highly detailed.");
+    imgBomb.onerror = () => generateFallbackImage(imgBomb, "A clean 2D cute MapleStory style game sprite of a round black bomb with a lit fuse, white background, flat lighting, clear outline, centered, highly detailed.");
+
+    const arrowPrompt = "A clean 2D cute MapleStory style UI icon of a left and right arrow, white background, flat lighting, clear outline, centered, highly detailed.";
+    document.querySelectorAll('.control-group img').forEach(img => {
+        img.onerror = async function() {
+            this.onerror = null;
+            if (this.src.includes('arrow.png')) {
+                 if (typeof puter !== 'undefined' && puter.ai) {
+                    try {
+                        const genImg = await puter.ai.txt2img(arrowPrompt, { model: 'gemini-2.5-flash-image-preview' });
+                        this.src = genImg.src;
+                        return;
+                    } catch(e) {}
+                 }
+                 this.outerHTML = '↔️';
+            } else if (this.src.includes('bomb.png')) {
+                 if (typeof puter !== 'undefined' && puter.ai) {
+                    try {
+                        const genImg = await puter.ai.txt2img("A clean 2D cute MapleStory style game sprite of a round black bomb with a lit fuse, white background, flat lighting, clear outline, centered, highly detailed.", { model: 'gemini-2.5-flash-image-preview' });
+                        this.src = genImg.src;
+                        return;
+                    } catch(e) {}
+                 }
+                 this.outerHTML = '💣';
+            }
+        };
+    });
 
     // Game state
     let state = 'idle'; // idle, flying, waiting
