@@ -192,6 +192,7 @@
     let score = 0;
     let scoreAtLevelStart = 0;
     let apples = [];
+    let obstacleBombs = []; // Added for advanced level obstacle bombs
     let particles = []; 
     let isDragging = false;
     let preLaunchX = 0;
@@ -292,6 +293,7 @@
     function createLevel() {
         scoreAtLevelStart = score;
         apples = [];
+        obstacleBombs = []; // reset obstacle bombs
         const numApples = Math.min(2 + Math.floor(level / 2), 7); 
         
         for (let i = 0; i < numApples; i++) {
@@ -314,6 +316,19 @@
                 if (!tooClose) {
                     apples.push({ x, y, radius: size, collected: false });
                     placed = true;
+                    
+                    // Add obstacle bomb near the apple if level > 3
+                    if (level > 3 && Math.random() > 0.4) {
+                        const bombDist = size + 20 + Math.random() * 20;
+                        const bombAngle = Math.random() * Math.PI * 2;
+                        const bombX = x + Math.cos(bombAngle) * bombDist;
+                        const bombY = y + Math.sin(bombAngle) * bombDist;
+                        
+                        // Keep bomb in bounds and not too close to the ground
+                        if (bombX > 20 && bombX < canvas.width - 20 && bombY > 20 && bombY < groundY - 50) {
+                             obstacleBombs.push({ x: bombX, y: bombY, radius: 15 });
+                        }
+                    }
                 }
                 attempts++;
             }
@@ -370,6 +385,38 @@
             sloth.x += sloth.vx;
             sloth.y += sloth.vy;
             sloth.rotation += sloth.vx * 0.05;
+
+            // Check obstacle bomb collision
+            for (let i = 0; i < obstacleBombs.length; i++) {
+                let bomb = obstacleBombs[i];
+                const dist = Math.hypot(sloth.x - bomb.x, sloth.y - bomb.y);
+                if (dist < sloth.radius + bomb.radius) {
+                    createExplosion(sloth.x, sloth.y, 8); // Big explosion
+                    playSound('explosion');
+                    sloth.vx = 0;
+                    sloth.vy = 0;
+                    state = 'waiting';
+                    
+                    // Fail the level instantly
+                    setTimeout(() => {
+                        if (state === 'waiting') {
+                            apples.forEach(a => a.collected = false);
+                            score = scoreAtLevelStart;
+                            scoreEl.textContent = score;
+                            
+                            sloth.x = preLaunchX;
+                            sloth.y = preLaunchY;
+                            sloth.vx = 0;
+                            sloth.vy = 0;
+                            sloth.rotation = 0;
+                            
+                            state = 'idle';
+                            launchBtn.style.display = 'block';
+                        }
+                    }, 1500);
+                    return; // Stop further updates for this frame
+                }
+            }
 
             if (sloth.x - sloth.radius < 0) {
                 sloth.x = sloth.radius;
@@ -501,6 +548,16 @@
                     ctx.font = `${a.radius * 2}px Arial`;
                     ctx.fillText('🍎', a.x, a.y);
                 }
+            }
+        }
+        
+        // Draw obstacle bombs
+        for (let bomb of obstacleBombs) {
+            if (imgBomb.complete && imgBomb.naturalHeight !== 0) {
+                ctx.drawImage(imgBomb, bomb.x - bomb.radius, bomb.y - bomb.radius, bomb.radius * 2, bomb.radius * 2);
+            } else {
+                ctx.font = `${bomb.radius * 2}px Arial`;
+                ctx.fillText('💣', bomb.x, bomb.y);
             }
         }
 
