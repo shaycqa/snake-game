@@ -61,27 +61,27 @@
         cursor: pointer;
         accent-color: #FFB03B;
     }
-    button {
-        padding: 12px;
-        font-size: 18px;
+    #launchBtn {
+        position: absolute;
+        bottom: 25px; /* Above the floor */
+        right: 15px; /* On the side */
+        padding: 10px 15px;
+        font-size: 16px;
         font-weight: bold;
         background-color: #FF5722;
         color: white;
         border: none;
         border-radius: 5px;
         cursor: pointer;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         transition: background 0.2s, transform 0.1s;
+        z-index: 10;
     }
-    button:hover {
+    #launchBtn:hover {
         background-color: #E64A19;
     }
-    button:active {
+    #launchBtn:active {
         transform: scale(0.95);
-    }
-    button:disabled {
-        background-color: #ccc;
-        cursor: not-allowed;
-        transform: none;
     }
     #hud {
         display: flex;
@@ -111,6 +111,7 @@
 
 <div id="game-container">
     <canvas id="gameCanvas" width="400" height="450"></canvas>
+    <button id="launchBtn">LAUNCH!</button>
 </div>
 
 <div id="ui-container">
@@ -126,7 +127,6 @@
         </label>
         <input type="range" id="directionSlider" min="-10" max="10" value="0">
     </div>
-    <button id="launchBtn">LAUNCH SLOTH!</button>
 </div>
 
 <script>
@@ -194,6 +194,8 @@
     let apples = [];
     let particles = []; 
     let isDragging = false;
+    let preLaunchX = 0;
+    let preLaunchY = 0;
 
     const groundY = canvas.height - 15;
     
@@ -214,7 +216,8 @@
     };
 
     const gravity = 0.25;
-    const bounceFactor = -0.7;
+    const bounceFactor = -0.7; // Wall bounce
+    const floorBounceFactor = -0.3; // Less bouncy floor
     const friction = 0.8;
 
     // UI Elements
@@ -318,8 +321,7 @@
         sloth.reset();
         state = 'idle';
         levelEl.textContent = level;
-        launchBtn.disabled = false;
-        launchBtn.textContent = 'LAUNCH SLOTH!';
+        launchBtn.style.display = 'block';
     }
 
     function createExplosion(x, y, power) {
@@ -345,6 +347,10 @@
         let forceY = -7 - (power * 1.0); 
         let forceX = -direction * 1.8; 
 
+        // Save pre-launch position
+        preLaunchX = sloth.x;
+        preLaunchY = sloth.y;
+
         sloth.vx = forceX;
         sloth.vy = forceY;
         
@@ -355,8 +361,7 @@
         playSound('explosion');
 
         state = 'flying';
-        launchBtn.disabled = true;
-        launchBtn.textContent = 'FLYING...';
+        launchBtn.style.display = 'none';
     });
 
     function update() {
@@ -384,7 +389,7 @@
 
             if (sloth.y + sloth.radius > groundY) {
                 sloth.y = groundY - sloth.radius;
-                sloth.vy *= bounceFactor;
+                sloth.vy *= floorBounceFactor; // Less bouncy floor
                 sloth.vx *= friction;
                 
                 if (Math.abs(sloth.vy) < 2.0 && Math.abs(sloth.vx) < 0.5) {
@@ -394,23 +399,26 @@
                     state = 'waiting';
                     
                     if (apples.every(a => a.collected)) {
-                        launchBtn.textContent = 'LEVEL CLEAR!';
                         level++;
-                        setTimeout(createLevel, 1500);
+                        setTimeout(createLevel, 1000);
                     } else {
-                        launchBtn.textContent = 'MISSED! RETRYING...';
                         setTimeout(() => {
                             if (state === 'waiting') {
                                 apples.forEach(a => a.collected = false);
                                 score = scoreAtLevelStart;
                                 scoreEl.textContent = score;
                                 
-                                sloth.reset();
+                                // Restore to pre-launch position
+                                sloth.x = preLaunchX;
+                                sloth.y = preLaunchY;
+                                sloth.vx = 0;
+                                sloth.vy = 0;
+                                sloth.rotation = 0;
+                                
                                 state = 'idle';
-                                launchBtn.disabled = false;
-                                launchBtn.textContent = 'LAUNCH SLOTH!';
+                                launchBtn.style.display = 'block';
                             }
-                        }, 1500);
+                        }, 1000);
                     }
                 } else if (Math.abs(sloth.vy) > 2.0) {
                     playSound('bounce');
